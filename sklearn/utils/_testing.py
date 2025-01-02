@@ -1272,11 +1272,9 @@ def _array_api_for_tests(array_namespace, device):
         raise SkipTest(
             f"{array_namespace} is not installed: not checking array_api input"
         )
-    
+
     if os.environ.get("SCIPY_ARRAY_API") is None:
-        raise SkipTest(
-            "SCIPY_ARRAY_API is not set: not checking array_api input"
-        )
+        raise SkipTest("SCIPY_ARRAY_API is not set: not checking array_api input")
 
     from sklearn.externals.array_api_compat import get_namespace
 
