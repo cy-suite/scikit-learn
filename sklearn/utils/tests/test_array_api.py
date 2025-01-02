@@ -21,7 +21,7 @@ from sklearn.utils._array_api import (
     _nanmax,
     _nanmean,
     _nanmin,
-    _NumPyAPIWrapper,
+    np_compat,
     _ravel,
     device,
     get_namespace,
@@ -42,7 +42,7 @@ from sklearn.utils.fixes import _IS_32BIT, CSR_CONTAINERS, np_version, parse_ver
 def test_get_namespace_ndarray_default(X):
     """Check that get_namespace returns NumPy wrapper"""
     xp_out, is_array_api_compliant = get_namespace(X)
-    assert isinstance(xp_out, _NumPyAPIWrapper)
+    assert isinstance(xp_out, np_compat)
     assert not is_array_api_compliant
 
 
@@ -439,7 +439,7 @@ def test_convert_estimator_to_array_api():
 
 def test_reshape_behavior():
     """Check reshape behavior with copy and is strict with non-tuple shape."""
-    xp = _NumPyAPIWrapper()
+    xp = np_compat
     X = xp.asarray([[1, 2, 3], [3, 4, 5]])
 
     X_no_copy = xp.reshape(X, (-1,), copy=False)
@@ -453,8 +453,8 @@ def test_reshape_behavior():
 
 
 def test_get_namespace_array_api_isdtype():
-    """Test isdtype implementation from _NumPyAPIWrapper."""
-    xp = _NumPyAPIWrapper()
+    """Test isdtype implementation from np_compat."""
+    xp = np_compat
 
     assert xp.isdtype(xp.float32, xp.float32)
     assert xp.isdtype(xp.float32, "real floating")
