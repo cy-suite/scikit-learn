@@ -34,7 +34,7 @@ else
 fi
 
 echo -e "### Running mypy ###\n"
-mypy
+mypy sklearn/
 status=$?
 if [[ $status -eq 0 ]]
 then
