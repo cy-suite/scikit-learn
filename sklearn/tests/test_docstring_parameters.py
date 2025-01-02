@@ -48,7 +48,9 @@ with warnings.catch_warnings():
         [
             pckg[1]
             for pckg in walk_packages(prefix="sklearn.", path=sklearn_path)
-            if not any(substr in pckg[1] for substr in ["._", ".tests.", "sklearn.externals"])
+            if not any(
+                substr in pckg[1] for substr in ["._", ".tests.", "sklearn.externals"]
+            )
         ]
     )
 
