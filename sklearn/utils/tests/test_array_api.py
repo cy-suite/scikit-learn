@@ -21,12 +21,12 @@ from sklearn.utils._array_api import (
     _nanmax,
     _nanmean,
     _nanmin,
-    np_compat,
     _ravel,
     device,
     get_namespace,
     get_namespace_and_device,
     indexing_dtype,
+    np_compat,
     supported_float_dtypes,
     yield_namespace_device_dtype_combinations,
 )
