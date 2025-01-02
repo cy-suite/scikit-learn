@@ -215,9 +215,11 @@ def _yield_classifier_checks(classifier):
     # test classifiers can handle non-array data and pandas objects
     yield check_classifier_data_not_an_array
     # test classifiers trained on a single label always return this label
-    yield check_classifiers_one_label
-    yield check_classifiers_one_label_sample_weights
-    yield check_classifiers_classes
+    if tags.target_tags.single_output:
+        yield check_classifiers_one_label
+        yield check_classifiers_one_label_sample_weights
+        yield check_classifiers_classes
+
     yield check_estimators_partial_fit_n_features
     if tags.target_tags.multi_output:
         yield check_classifier_multioutput
@@ -4909,8 +4911,11 @@ def check_param_validation(name, estimator_orig):
 
             with raises(InvalidParameterError, match=match, err_msg=err_msg):
                 if tags.target_tags.one_d_labels or tags.target_tags.two_d_labels:
-                    # The estimator is a label transformer and take only `y`
-                    getattr(estimator, method)(y)
+                    if tags.target_tags.multi_output:
+                        getattr(estimator, method)(X, y)
+                    else:
+                        # The estimator is a label transformer and take only `y`
+                        getattr(estimator, method)(y)
                 else:
                     getattr(estimator, method)(X, y)
 
@@ -4944,8 +4949,11 @@ def check_param_validation(name, estimator_orig):
 
                 with raises(InvalidParameterError, match=match, err_msg=err_msg):
                     if tags.target_tags.one_d_labels or tags.target_tags.two_d_labels:
-                        # The estimator is a label transformer and take only `y`
-                        getattr(estimator, method)(y)
+                        if tags.target_tags.multi_output:
+                            getattr(estimator, method)(X, y)
+                        else:
+                            # The estimator is a label transformer and take only `y`
+                            getattr(estimator, method)(y)
                     else:
                         getattr(estimator, method)(X, y)
 
