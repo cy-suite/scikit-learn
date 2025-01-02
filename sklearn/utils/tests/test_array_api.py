@@ -27,7 +27,6 @@ from sklearn.utils._array_api import (
     get_namespace_and_device,
     indexing_dtype,
     np_compat,
-    supported_float_dtypes,
     yield_namespace_device_dtype_combinations,
 )
 from sklearn.utils._testing import (
