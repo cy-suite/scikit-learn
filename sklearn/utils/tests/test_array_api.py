@@ -42,7 +42,7 @@ from sklearn.utils.fixes import _IS_32BIT, CSR_CONTAINERS, np_version, parse_ver
 def test_get_namespace_ndarray_default(X):
     """Check that get_namespace returns NumPy wrapper"""
     xp_out, is_array_api_compliant = get_namespace(X)
-    assert isinstance(xp_out, np_compat)
+    assert xp_out is np_compat
     assert not is_array_api_compliant
 
 
@@ -435,56 +435,6 @@ def test_convert_estimator_to_array_api():
 
     new_est = _estimator_with_converted_arrays(est, lambda array: xp.asarray(array))
     assert hasattr(new_est.X_, "__array_namespace__")
-
-
-def test_reshape_behavior():
-    """Check reshape behavior with copy and is strict with non-tuple shape."""
-    xp = np_compat
-    X = xp.asarray([[1, 2, 3], [3, 4, 5]])
-
-    X_no_copy = xp.reshape(X, (-1,), copy=False)
-    assert X_no_copy.base is X
-
-    X_copy = xp.reshape(X, (6, 1), copy=True)
-    assert X_copy.base is not X.base
-
-    with pytest.raises(TypeError, match="shape must be a tuple"):
-        xp.reshape(X, -1)
-
-
-def test_get_namespace_array_api_isdtype():
-    """Test isdtype implementation from np_compat."""
-    xp = np_compat
-
-    assert xp.isdtype(xp.float32, xp.float32)
-    assert xp.isdtype(xp.float32, "real floating")
-    assert xp.isdtype(xp.float64, "real floating")
-    assert not xp.isdtype(xp.int32, "real floating")
-
-    for dtype in supported_float_dtypes(xp):
-        assert xp.isdtype(dtype, "real floating")
-
-    assert xp.isdtype(xp.bool, "bool")
-    assert not xp.isdtype(xp.float32, "bool")
-
-    assert xp.isdtype(xp.int16, "signed integer")
-    assert not xp.isdtype(xp.uint32, "signed integer")
-
-    assert xp.isdtype(xp.uint16, "unsigned integer")
-    assert not xp.isdtype(xp.int64, "unsigned integer")
-
-    assert xp.isdtype(xp.int64, "numeric")
-    assert xp.isdtype(xp.float32, "numeric")
-    assert xp.isdtype(xp.uint32, "numeric")
-
-    assert not xp.isdtype(xp.float32, "complex floating")
-
-    assert not xp.isdtype(xp.int8, "complex floating")
-    assert xp.isdtype(xp.complex64, "complex floating")
-    assert xp.isdtype(xp.complex128, "complex floating")
-
-    with pytest.raises(ValueError, match="Unrecognized data type"):
-        assert xp.isdtype(xp.int16, "unknown")
 
 
 @pytest.mark.parametrize(
