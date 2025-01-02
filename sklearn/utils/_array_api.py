@@ -557,7 +557,7 @@ def _find_matching_floating_dtype(*arrays, xp):
     If there are no floating point input arrays (all integral inputs for
     instance), return the default floating point dtype for the namespace.
     """
-    dtyped_arrays = [a for a in arrays if hasattr(a, "dtype")]
+    dtyped_arrays = [xp.asarray(a) for a in arrays if hasattr(a, "dtype")]
     floating_dtypes = [
         a.dtype for a in dtyped_arrays if xp.isdtype(a.dtype, "real floating")
     ]
