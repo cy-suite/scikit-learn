@@ -30,6 +30,7 @@ from sklearn.utils._array_api import (
     yield_namespace_device_dtype_combinations,
 )
 from sklearn.utils._testing import (
+    SkipTest,
     _array_api_for_tests,
     assert_array_equal,
     skip_if_array_api_compat_not_configured,
@@ -572,6 +573,8 @@ def test_fill_or_add_to_diagonal(array_namespace, device_, dtype_name, wrap):
 @pytest.mark.parametrize("dispatch", [True, False])
 def test_sparse_device(csr_container, dispatch):
     a, b = csr_container(numpy.array([[1]])), csr_container(numpy.array([[2]]))
+    if dispatch and os.environ.get("SCIPY_ARRAY_API") is None:
+        raise SkipTest("SCIPY_ARRAY_API is not set: not checking array_api input")
     with config_context(array_api_dispatch=dispatch):
         assert device(a, b) is None
         assert device(a, numpy.array([1])) is None
