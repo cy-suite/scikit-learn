@@ -1268,7 +1268,7 @@ class MinimalTransformer:
 def _array_api_for_tests(array_namespace, device):
     try:
         array_mod = importlib.import_module(array_namespace)
-    except ModuleNotFoundError:
+    except (ModuleNotFoundError, ImportError):
         raise SkipTest(
             f"{array_namespace} is not installed: not checking array_api input"
         )
