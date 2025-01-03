@@ -438,6 +438,26 @@ class _NumPyAPIWrapper:
     def pow(self, x1, x2):
         return numpy.power(x1, x2)
 
+    # from array-api-compat
+    def argsort(self, x, axis=-1, descending=False, stable=True, **kwargs):
+        if stable:
+            kwargs["kind"] = "stable"
+        if not descending:
+            res = numpy.argsort(x, axis=axis, **kwargs)
+        else:
+            # As NumPy has no native descending sort, we imitate it here. Note that
+            # simply flipping the results of numpy.argsort(x, ...) would not
+            # respect the relative order like it would in native descending sorts.
+            res = numpy.flip(
+                numpy.argsort(numpy.flip(x, axis=axis), axis=axis, **kwargs),
+                axis=axis,
+            )
+            # Rely on flip()/argsort() to validate axis
+            normalised_axis = axis if axis >= 0 else x.ndim + axis
+            max_i = x.shape[normalised_axis] - 1
+            res = max_i - res
+        return res
+
 
 _NUMPY_API_WRAPPER_INSTANCE = _NumPyAPIWrapper()
 
