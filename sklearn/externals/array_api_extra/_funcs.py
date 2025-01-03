@@ -1,17 +1,31 @@
+"""Public API Functions."""
+
+# https://github.com/scikit-learn/scikit-learn/pull/27910#issuecomment-2568023972
 from __future__ import annotations
 
+import operator
 import warnings
 
+# https://github.com/pylint-dev/pylint/issues/10112
+from collections.abc import Callable  # pylint: disable=import-error
+from typing import ClassVar, Literal
+
 from ._lib import _compat, _utils
-from ._lib._compat import array_namespace
-from ._lib._typing import Array, ModuleType
+from ._lib._compat import (
+    array_namespace,
+    is_jax_array,
+    is_writeable_array,
+)
+from ._lib._typing import Array, Index, ModuleType
 
 __all__ = [
+    "at",
     "atleast_nd",
     "cov",
     "create_diagonal",
     "expand_dims",
     "kron",
+    "pad",
     "setdiff1d",
     "sinc",
 ]
@@ -24,14 +38,15 @@ def atleast_nd(x: Array, /, *, ndim: int, xp: ModuleType | None = None) -> Array
     Parameters
     ----------
     x : array
+        Input array.
     ndim : int
         The minimum number of dimensions for the result.
     xp : array_namespace, optional
-        The standard-compatible namespace for `x`. Default: infer
+        The standard-compatible namespace for `x`. Default: infer.
 
     Returns
     -------
-    res : array
+    array
         An array with ``res.ndim`` >= `ndim`.
         If ``x.ndim`` >= `ndim`, `x` is returned.
         If ``x.ndim`` < `ndim`, `x` is expanded by prepending new axes
@@ -49,7 +64,6 @@ def atleast_nd(x: Array, /, *, ndim: int, xp: ModuleType | None = None) -> Array
     ...                  [3, 4]]])
     >>> xpx.atleast_nd(x, ndim=1, xp=xp) is x
     True
-
     """
     if xp is None:
         xp = array_namespace(x)
@@ -79,11 +93,11 @@ def cov(m: Array, /, *, xp: ModuleType | None = None) -> Array:
         Each row of `m` represents a variable, and each column a single
         observation of all those variables.
     xp : array_namespace, optional
-        The standard-compatible namespace for `m`. Default: infer
+        The standard-compatible namespace for `m`. Default: infer.
 
     Returns
     -------
-    res : array
+    array
         The covariance matrix of the variables.
 
     Examples
@@ -106,7 +120,6 @@ def cov(m: Array, /, *, xp: ModuleType | None = None) -> Array:
     Array([[ 1., -1.],
            [-1.,  1.]], dtype=array_api_strict.float64)
 
-
     Note that element :math:`C_{0,1}`, which shows the correlation between
     :math:`x_0` and :math:`x_1`, is negative.
 
@@ -124,7 +137,6 @@ def cov(m: Array, /, *, xp: ModuleType | None = None) -> Array:
 
     >>> xpx.cov(y, xp=xp)
     Array(2.14413333, dtype=array_api_strict.float64)
-
     """
     if xp is None:
         xp = array_namespace(m)
@@ -163,17 +175,17 @@ def create_diagonal(
     Parameters
     ----------
     x : array
-        A 1-D array
+        A 1-D array.
     offset : int, optional
         Offset from the leading diagonal (default is ``0``).
         Use positive ints for diagonals above the leading diagonal,
         and negative ints for diagonals below the leading diagonal.
     xp : array_namespace, optional
-        The standard-compatible namespace for `x`. Default: infer
+        The standard-compatible namespace for `x`. Default: infer.
 
     Returns
     -------
-    res : array
+    array
         A 2-D array with `x` on the diagonal (offset by `offset`).
 
     Examples
@@ -193,7 +205,6 @@ def create_diagonal(
            [2, 0, 0, 0, 0],
            [0, 4, 0, 0, 0],
            [0, 0, 8, 0, 0]], dtype=array_api_strict.int64)
-
     """
     if xp is None:
         xp = array_namespace(x)
@@ -223,6 +234,7 @@ def expand_dims(
     Parameters
     ----------
     a : array
+        Array to have its shape expanded.
     axis : int or tuple of ints, optional
         Position(s) in the expanded axes where the new axis (or axes) is/are placed.
         If multiple positions are provided, they should be unique (note that a position
@@ -230,11 +242,11 @@ def expand_dims(
         that will also result in an error).
         Default: ``(0,)``.
     xp : array_namespace, optional
-        The standard-compatible namespace for `a`. Default: infer
+        The standard-compatible namespace for `a`. Default: infer.
 
     Returns
     -------
-    res : array
+    array
         `a` with an expanded shape.
 
     Examples
@@ -272,7 +284,6 @@ def expand_dims(
     >>> y
     Array([[[1],
             [2]]], dtype=array_api_strict.int64)
-
     """
     if xp is None:
         xp = array_namespace(a)
@@ -306,12 +317,13 @@ def kron(a: Array, b: Array, /, *, xp: ModuleType | None = None) -> Array:
     Parameters
     ----------
     a, b : array
+        Input arrays.
     xp : array_namespace, optional
-        The standard-compatible namespace for `a` and `b`. Default: infer
+        The standard-compatible namespace for `a` and `b`. Default: infer.
 
     Returns
     -------
-    res : array
+    array
         The Kronecker product of `a` and `b`.
 
     Notes
@@ -335,7 +347,6 @@ def kron(a: Array, b: Array, /, *, xp: ModuleType | None = None) -> Array:
          [  ...                              ...   ],
          [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
 
-
     Examples
     --------
     >>> import array_api_strict as xp
@@ -354,7 +365,6 @@ def kron(a: Array, b: Array, /, *, xp: ModuleType | None = None) -> Array:
            [0., 0., 1., 1.],
            [0., 0., 1., 1.]], dtype=array_api_strict.float64)
 
-
     >>> a = xp.reshape(xp.arange(100), (2, 5, 2, 5))
     >>> b = xp.reshape(xp.arange(24), (2, 3, 4))
     >>> c = xpx.kron(a, b, xp=xp)
@@ -367,7 +377,6 @@ def kron(a: Array, b: Array, /, *, xp: ModuleType | None = None) -> Array:
     >>> K = tuple(xp.asarray(I) * xp.asarray(S1) + xp.asarray(J1))
     >>> c[K] == a[I]*b[J]
     Array(True, dtype=array_api_strict.bool)
-
     """
     if xp is None:
         xp = array_namespace(a, b)
@@ -426,11 +435,11 @@ def setdiff1d(
         If ``True``, the input arrays are both assumed to be unique, which
         can speed up the calculation. Default is ``False``.
     xp : array_namespace, optional
-        The standard-compatible namespace for `x1` and `x2`. Default: infer
+        The standard-compatible namespace for `x1` and `x2`. Default: infer.
 
     Returns
     -------
-    res : array
+    array
         1D array of values in `x1` that are not in `x2`. The result
         is sorted when `assume_unique` is ``False``, but otherwise only sorted
         if the input is sorted.
@@ -444,7 +453,6 @@ def setdiff1d(
     >>> x2 = xp.asarray([3, 4, 5, 6])
     >>> xpx.setdiff1d(x1, x2, xp=xp)
     Array([1, 2], dtype=array_api_strict.int64)
-
     """
     if xp is None:
         xp = array_namespace(x1, x2)
@@ -478,11 +486,11 @@ def sinc(x: Array, /, *, xp: ModuleType | None = None) -> Array:
         Array (possibly multi-dimensional) of values for which to calculate
         ``sinc(x)``. Must have a real floating point dtype.
     xp : array_namespace, optional
-        The standard-compatible namespace for `x`. Default: infer
+        The standard-compatible namespace for `x`. Default: infer.
 
     Returns
     -------
-    res : array
+    array
         ``sinc(x)`` calculated elementwise, which has the same shape as the input.
 
     Notes
@@ -530,7 +538,6 @@ def sinc(x: Array, /, *, xp: ModuleType | None = None) -> Array:
            -5.84680802e-02, -8.90384387e-02,
            -8.40918587e-02, -4.92362781e-02,
            -3.89817183e-17], dtype=array_api_strict.float64)
-
     """
     if xp is None:
         xp = array_namespace(x)
@@ -545,3 +552,373 @@ def sinc(x: Array, /, *, xp: ModuleType | None = None) -> Array:
         xp.asarray(xp.finfo(x.dtype).eps, dtype=x.dtype, device=_compat.device(x)),
     )
     return xp.sin(y) / y
+
+
+def pad(
+    x: Array,
+    pad_width: int,
+    mode: str = "constant",
+    *,
+    xp: ModuleType | None = None,
+    constant_values: bool | int | float | complex = 0,
+) -> Array:
+    """
+    Pad the input array.
+
+    Parameters
+    ----------
+    x : array
+        Input array.
+    pad_width : int
+        Pad the input array with this many elements from each side.
+    mode : str, optional
+        Only "constant" mode is currently supported, which pads with
+        the value passed to `constant_values`.
+    xp : array_namespace, optional
+        The standard-compatible namespace for `x`. Default: infer.
+    constant_values : python scalar, optional
+        Use this value to pad the input. Default is zero.
+
+    Returns
+    -------
+    array
+        The input array,
+        padded with ``pad_width`` elements equal to ``constant_values``.
+    """
+    if mode != "constant":
+        msg = "Only `'constant'` mode is currently supported"
+        raise NotImplementedError(msg)
+
+    value = constant_values
+
+    if xp is None:
+        xp = array_namespace(x)
+
+    padded = xp.full(
+        tuple(x + 2 * pad_width for x in x.shape),
+        fill_value=value,
+        dtype=x.dtype,
+        device=_compat.device(x),
+    )
+    padded[(slice(pad_width, -pad_width, None),) * x.ndim] = x
+    return padded
+
+
+_undef = object()
+
+
+class at:  # pylint: disable=invalid-name  # numpydoc ignore=PR02
+    """
+    Update operations for read-only arrays.
+
+    This implements ``jax.numpy.ndarray.at`` for all writeable
+    backends (those that support ``__setitem__``) and routes
+    to the ``.at[]`` method for JAX arrays.
+
+    Parameters
+    ----------
+    x : array
+        Input array.
+    idx : index, optional
+        Only `array API standard compliant indices
+        <https://data-apis.org/array-api/latest/API_specification/indexing.html>`_
+        are supported.
+
+        You may use two alternate syntaxes::
+
+          >>> import array_api_extra as xpx
+          >>> xpx.at(x, idx).set(value)  # or add(value), etc.
+          >>> xpx.at(x)[idx].set(value)
+
+    copy : bool, optional
+        None (default)
+            The array parameter *may* be modified in place if it is
+            possible and beneficial for performance.
+            You should not reuse it after calling this function.
+        True
+            Ensure that the inputs are not modified.
+        False
+            Ensure that the update operation writes back to the input.
+            Raise ``ValueError`` if a copy cannot be avoided.
+
+    xp : array_namespace, optional
+        The standard-compatible namespace for `x`. Default: infer.
+
+    Returns
+    -------
+    Updated input array.
+
+    Warnings
+    --------
+    (a) When you omit the ``copy`` parameter, you should always immediately overwrite
+    the parameter array::
+
+        >>> import array_api_extra as xpx
+        >>> x = xpx.at(x, 0).set(2)
+
+    The anti-pattern below must be avoided, as it will result in different
+    behaviour on read-only versus writeable arrays::
+
+        >>> x = xp.asarray([0, 0, 0])
+        >>> y = xpx.at(x, 0).set(2)
+        >>> z = xpx.at(x, 1).set(3)
+
+    In the above example, ``x == [0, 0, 0]``, ``y == [2, 0, 0]`` and z == ``[0, 3, 0]``
+    when ``x`` is read-only, whereas ``x == y == z == [2, 3, 0]`` when ``x`` is
+    writeable!
+
+    (b) The array API standard does not support integer array indices.
+    The behaviour of update methods when the index is an array of integers is
+    undefined and will vary between backends; this is particularly true when the
+    index contains multiple occurrences of the same index, e.g.::
+
+        >>> import numpy as np
+        >>> import jax.numpy as jnp
+        >>> import array_api_extra as xpx
+        >>> xpx.at(np.asarray([123]), np.asarray([0, 0])).add(1)
+        array([124])
+        >>> xpx.at(jnp.asarray([123]), jnp.asarray([0, 0])).add(1)
+        Array([125], dtype=int32)
+
+    See Also
+    --------
+    jax.numpy.ndarray.at : Equivalent array method in JAX.
+
+    Notes
+    -----
+    `sparse <https://sparse.pydata.org/>`_, as well as read-only arrays from libraries
+    not explicitly covered by ``array-api-compat``, are not supported by update
+    methods.
+
+    Examples
+    --------
+    Given either of these equivalent expressions::
+
+      >>> import array_api_extra as xpx
+      >>> x = xpx.at(x)[1].add(2)
+      >>> x = xpx.at(x, 1).add(2)
+
+    If x is a JAX array, they are the same as::
+
+      >>> x = x.at[1].add(2)
+
+    If x is a read-only numpy array, they are the same as::
+
+      >>> x = x.copy()
+      >>> x[1] += 2
+
+    For other known backends, they are the same as::
+
+      >>> x[1] += 2
+    """
+
+    _x: Array
+    _idx: Index
+    __slots__: ClassVar[tuple[str, ...]] = ("_idx", "_x")
+
+    def __init__(
+        self, x: Array, idx: Index = _undef, /
+    ) -> None:  # numpydoc ignore=GL08
+        self._x = x
+        self._idx = idx
+
+    def __getitem__(self, idx: Index, /) -> at:  # numpydoc ignore=PR01,RT01
+        """
+        Allow for the alternate syntax ``at(x)[start:stop:step]``.
+
+        It looks prettier than ``at(x, slice(start, stop, step))``
+        and feels more intuitive coming from the JAX documentation.
+        """
+        if self._idx is not _undef:
+            msg = "Index has already been set"
+            raise ValueError(msg)
+        return at(self._x, idx)
+
+    def _update_common(
+        self,
+        at_op: str,
+        y: Array,
+        /,
+        copy: bool | None,
+        xp: ModuleType | None,
+    ) -> tuple[Array, None] | tuple[None, Array]:  # numpydoc ignore=PR01
+        """
+        Perform common prepocessing to all update operations.
+
+        Returns
+        -------
+        tuple
+            If the operation can be resolved by ``at[]``, ``(return value, None)``
+            Otherwise, ``(None, preprocessed x)``.
+        """
+        x, idx = self._x, self._idx
+
+        if idx is _undef:
+            msg = (
+                "Index has not been set.\n"
+                "Usage: either\n"
+                "    at(x, idx).set(value)\n"
+                "or\n"
+                "    at(x)[idx].set(value)\n"
+                "(same for all other methods)."
+            )
+            raise ValueError(msg)
+
+        if copy not in (True, False, None):
+            msg = f"copy must be True, False, or None; got {copy!r}"  # pyright: ignore[reportUnreachable]
+            raise ValueError(msg)
+
+        if copy is None:
+            writeable = is_writeable_array(x)
+            copy = not writeable
+        elif copy:
+            writeable = None
+        else:
+            writeable = is_writeable_array(x)
+
+        if copy:
+            if is_jax_array(x):
+                # Use JAX's at[]
+                func = getattr(x.at[idx], at_op)
+                return func(y), None
+            # Emulate at[] behaviour for non-JAX arrays
+            # with a copy followed by an update
+            if xp is None:
+                xp = array_namespace(x)
+            x = xp.asarray(x, copy=True)
+            if writeable is False:
+                # A copy of a read-only numpy array is writeable
+                # Note: this assumes that a copy of a writeable array is writeable
+                writeable = None
+
+        if writeable is None:
+            writeable = is_writeable_array(x)
+        if not writeable:
+            # sparse crashes here
+            msg = f"Can't update read-only array {x}"
+            raise ValueError(msg)
+
+        return None, x
+
+    def set(
+        self,
+        y: Array,
+        /,
+        copy: bool | None = None,
+        xp: ModuleType | None = None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """Apply ``x[idx] = y`` and return the update array."""
+        res, x = self._update_common("set", y, copy=copy, xp=xp)
+        if res is not None:
+            return res
+        assert x is not None
+        x[self._idx] = y
+        return x
+
+    def _iop(
+        self,
+        at_op: Literal[
+            "set", "add", "subtract", "multiply", "divide", "power", "min", "max"
+        ],
+        elwise_op: Callable[[Array, Array], Array],
+        y: Array,
+        /,
+        copy: bool | None,
+        xp: ModuleType | None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """
+        ``x[idx] += y`` or equivalent in-place operation on a subset of x.
+
+        which is the same as saying
+            x[idx] = x[idx] + y
+        Note that this is not the same as
+            operator.iadd(x[idx], y)
+        Consider for example when x is a numpy array and idx is a fancy index, which
+        triggers a deep copy on __getitem__.
+        """
+        res, x = self._update_common(at_op, y, copy=copy, xp=xp)
+        if res is not None:
+            return res
+        assert x is not None
+        x[self._idx] = elwise_op(x[self._idx], y)
+        return x
+
+    def add(
+        self,
+        y: Array,
+        /,
+        copy: bool | None = None,
+        xp: ModuleType | None = None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """Apply ``x[idx] += y`` and return the updated array."""
+
+        # Note for this and all other methods based on _iop:
+        # operator.iadd and operator.add subtly differ in behaviour, as
+        # only iadd will trigger exceptions when y has an incompatible dtype.
+        return self._iop("add", operator.iadd, y, copy=copy, xp=xp)
+
+    def subtract(
+        self,
+        y: Array,
+        /,
+        copy: bool | None = None,
+        xp: ModuleType | None = None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """Apply ``x[idx] -= y`` and return the updated array."""
+        return self._iop("subtract", operator.isub, y, copy=copy, xp=xp)
+
+    def multiply(
+        self,
+        y: Array,
+        /,
+        copy: bool | None = None,
+        xp: ModuleType | None = None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """Apply ``x[idx] *= y`` and return the updated array."""
+        return self._iop("multiply", operator.imul, y, copy=copy, xp=xp)
+
+    def divide(
+        self,
+        y: Array,
+        /,
+        copy: bool | None = None,
+        xp: ModuleType | None = None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """Apply ``x[idx] /= y`` and return the updated array."""
+        return self._iop("divide", operator.itruediv, y, copy=copy, xp=xp)
+
+    def power(
+        self,
+        y: Array,
+        /,
+        copy: bool | None = None,
+        xp: ModuleType | None = None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """Apply ``x[idx] **= y`` and return the updated array."""
+        return self._iop("power", operator.ipow, y, copy=copy, xp=xp)
+
+    def min(
+        self,
+        y: Array,
+        /,
+        copy: bool | None = None,
+        xp: ModuleType | None = None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """Apply ``x[idx] = minimum(x[idx], y)`` and return the updated array."""
+        if xp is None:
+            xp = array_namespace(self._x)
+        y = xp.asarray(y)
+        return self._iop("min", xp.minimum, y, copy=copy, xp=xp)
+
+    def max(
+        self,
+        y: Array,
+        /,
+        copy: bool | None = None,
+        xp: ModuleType | None = None,
+    ) -> Array:  # numpydoc ignore=PR01,RT01
+        """Apply ``x[idx] = maximum(x[idx], y)`` and return the updated array."""
+        if xp is None:
+            xp = array_namespace(self._x)
+        y = xp.asarray(y)
+        return self._iop("max", xp.maximum, y, copy=copy, xp=xp)

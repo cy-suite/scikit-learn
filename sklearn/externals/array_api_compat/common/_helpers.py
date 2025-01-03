@@ -91,7 +91,7 @@ def is_cupy_array(x):
     import cupy as cp
 
     # TODO: Should we reject ndarray subclasses?
-    return isinstance(x, (cp.ndarray, cp.generic))
+    return isinstance(x, cp.ndarray)
 
 def is_torch_array(x):
     """
@@ -428,7 +428,8 @@ def array_namespace(*xs, api_version=None, use_compat=None):
     Parameters
     ----------
     xs: arrays
-        one or more arrays.
+        one or more arrays. xs can also be Python scalars (bool, int, float,
+        complex, or None), which are ignored.
 
     api_version: str
         The newest version of the spec that you need support for (currently
@@ -555,6 +556,8 @@ def array_namespace(*xs, api_version=None, use_compat=None):
             if use_compat is True:
                 raise ValueError("The given array does not have an array-api-compat wrapper")
             namespaces.add(x.__array_namespace__(api_version=api_version))
+        elif isinstance(x, (bool, int, float, complex, type(None))):
+            continue
         else:
             # TODO: Support Python scalars?
             raise TypeError(f"{type(x).__name__} is not a supported array type")
@@ -784,6 +787,7 @@ def to_device(x: Array, device: Device, /, *, stream: Optional[Union[int, Any]] 
         return x
     return x.to_device(device, stream=stream)
 
+
 def size(x):
     """
     Return the total number of elements of x.
@@ -797,6 +801,23 @@ def size(x):
     if None in x.shape:
         return None
     return math.prod(x.shape)
+
+
+def is_writeable_array(x) -> bool:
+    """
+    Return False if ``x.__setitem__`` is expected to raise; True otherwise.
+
+    Warning
+    -------
+    As there is no standard way to check if an array is writeable without actually
+    writing to it, this function blindly returns True for all unknown array types.
+    """
+    if is_numpy_array(x):
+        return x.flags.writeable
+    if is_jax_array(x) or is_pydata_sparse_array(x):
+        return False
+    return True
+
 
 __all__ = [
     "array_namespace",
@@ -818,6 +839,7 @@ __all__ = [
     "is_ndonnx_namespace",
     "is_pydata_sparse_array",
     "is_pydata_sparse_namespace",
+    "is_writeable_array",
     "size",
     "to_device",
 ]
