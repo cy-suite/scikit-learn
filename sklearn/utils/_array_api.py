@@ -446,7 +446,9 @@ numpy_version = parse_version(numpy.__version__)
 if numpy_version < parse_version(_MIN_NUMPY_VERSION):
     np_compat = _NUMPY_API_WRAPPER_INSTANCE
 else:
-    from ..externals.array_api_compat import numpy as np_compat
+    from ..externals.array_api_compat import (  # type: ignore[assignment]
+        numpy as np_compat,
+    )
 
 
 def _remove_non_arrays(*arrays, remove_none=True, remove_types=(str,)):
