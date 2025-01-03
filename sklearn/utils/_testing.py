@@ -333,7 +333,7 @@ try:
     )
     skip_if_array_api_compat_not_configured = pytest.mark.skipif(
         not ARRAY_API_COMPAT_FUNCTIONAL,
-        reason="requires a new enough version of NumPy",
+        reason="SCIPY_ARRAY_API not set, or versions of NumPy/SciPy too old.",
     )
 
     #  Decorator for tests involving both BLAS calls and multiprocessing.
