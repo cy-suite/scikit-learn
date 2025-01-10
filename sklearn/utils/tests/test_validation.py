@@ -1401,7 +1401,7 @@ def test_check_scalar_valid(x):
             2,
             4,
             "neither",
-            ValueError("test_name2 == 1, must be > 2."),
+            ValueError("test_name2 == 1, must be in the range (2, 4)."),
         ),
         (
             5,
@@ -1410,7 +1410,7 @@ def test_check_scalar_valid(x):
             2,
             4,
             "neither",
-            ValueError("test_name3 == 5, must be < 4."),
+            ValueError("test_name3 == 5, must be in the range (2, 4)."),
         ),
         (
             2,
@@ -1419,7 +1419,7 @@ def test_check_scalar_valid(x):
             2,
             4,
             "right",
-            ValueError("test_name4 == 2, must be > 2."),
+            ValueError("test_name4 == 2, must be in the range (2, 4]."),
         ),
         (
             4,
@@ -1428,7 +1428,7 @@ def test_check_scalar_valid(x):
             2,
             4,
             "left",
-            ValueError("test_name5 == 4, must be < 4."),
+            ValueError("test_name5 == 4, must be in the range [2, 4)."),
         ),
         (
             4,
@@ -1465,6 +1465,24 @@ def test_check_scalar_valid(x):
                 "`include_boundaries`='right' without specifying explicitly `max_val` "
                 "is inconsistent."
             ),
+        ),
+        (
+            2,
+            "test_name9",
+            int,
+            2,
+            None,
+            "neither",
+            ValueError("test_name9 == 2, must be in the range (2, inf)."),
+        ),
+        (
+            4,
+            "test_name10",
+            int,
+            None,
+            4,
+            "neither",
+            ValueError("test_name10 == 4, must be in the range (-inf, 4)."),
         ),
     ],
 )
